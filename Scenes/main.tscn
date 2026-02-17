@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://cjksk0eccmse8"]
+
+[ext_resource type="PackedScene" uid="uid://djul882gonx1r" path="res://Scenes/server.tscn" id="1_jjgbg"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7u77a"]
+albedo_color = Color(0.7372549, 0.36862746, 0.39607844, 1)
+
+[node name="Main" type="Node3D" unique_id=2147066054]
+
+[node name="Server" parent="." unique_id=1055248373 instance=ExtResource("1_jjgbg")]
+
+[node name="Floor" type="CSGBox3D" parent="." unique_id=437219512]
+use_collision = true
+size = Vector3(11, 0.001, 11)
+material = SubResource("StandardMaterial3D_7u77a")
