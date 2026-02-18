@@ -26,7 +26,7 @@ public partial class Server : Node
             streamWriter = new StreamWriter(networkStream);
         }
 
-        public async Task SaveDevId()
+        public async Task SaveID()
         {
             string incomingMsg;
             incomingMsg = await streamReader.ReadLineAsync();
@@ -49,9 +49,19 @@ public partial class Server : Node
 
         public void Dispose() 
         {
-            streamReader.Close();
+            Task closeClientData = Task.Run( async () => await Close());
+        }
+
+        public async Task Close() 
+        {
+            await streamWriter.WriteLineAsync($"Server Closing Connection to {ID}");
+            await streamWriter.FlushAsync();
+
             streamWriter.Close();
+            streamReader.Close();
             clientRef.Close();
+
+            GD.Print($"Closing Client: {ID}");
         }
     }
 
@@ -60,7 +70,7 @@ public partial class Server : Node
     private static bool isServerRunning { get; set; }
 
     private static int portNumber = 4001;
-    private static IPAddress host = IPAddress.Parse("1207.0.0.1");
+    private static IPAddress host = IPAddress.Parse("127.0.0.1");
     private static List<ClientData> clientList = new List<ClientData>();
 
     private static readonly object _lock = new object();
@@ -90,7 +100,7 @@ public partial class Server : Node
         {
             clientList.Add(clientData); 
         }
-        Task taskID = Task.Run(async () => await clientData.SaveDevId());
+        Task taskID = Task.Run(async () => await clientData.SaveID());
         if (taskID.IsFaulted) {
             taskID.Wait();
         }

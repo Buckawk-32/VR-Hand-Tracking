@@ -1,3 +1,6 @@
 [gd_scene format=3 uid="uid://djul882gonx1r"]
 
+[ext_resource type="Script" uid="uid://dipq71yp6s04k" path="res://Scripts/Server.cs" id="1_ogqfs"]
+
 [node name="Server" type="Node3D" unique_id=1055248373]
+script = ExtResource("1_ogqfs")
