@@ -85,7 +85,10 @@ public partial class Server : Node
         while (true) {
             var client = await server.AcceptTcpClientAsync();
             GD.Print(" --- Accept New Client --- ");
-            await StartConnectionAsync(client);
+            var currentTask = StartConnectionAsync(client);
+            if (currentTask.IsFaulted) {
+                currentTask.Wait();
+            }
         }
     }
 
@@ -100,7 +103,11 @@ public partial class Server : Node
 
         try {
             if (!string.IsNullOrEmpty(clientData.ID) && clientData.ID != "NONE") {
-                await HandleClientAsync(clientData);
+                // await EchoClientAsync(clientData);
+                 var clientTask = LinkClientsAsync(clientData);
+                 if (clientTask.IsFaulted) {
+                     clientTask.Wait();
+                 }
             }
         }
         catch (Exception e) {
@@ -115,21 +122,21 @@ public partial class Server : Node
     }
 
 
-    private static async Task HandleClientAsync(ClientData clientData) 
+    private static async Task LinkClientsAsync(ClientData clientData)
     {
-        string clientMsg;
-
         while (clientList.Count == 1)
         {
-            // await clientData.streamWriter.WriteLineAsync($"Placeholder");
-            // await clientData.streamWriter.FlushAsync();
+            string clientMsg = await clientData.streamReader.ReadLineAsync();
 
-            clientMsg = await clientData.streamReader.ReadLineAsync();
-
+            
             if (clientMsg != null) {
                 if (clientMsg.StartsWith("MSG:")) {
-                    GD.Print($"{clientData.ID}: {clientMsg.Substring(4)}");  
-                    clientMsg = "";
+                    GD.Print($"{clientData.ID}: {clientMsg.Substring(4)}");
+
+                    foreach (ClientData otherClient in clientList) {
+                        await otherClient.streamWriter.WriteLineAsync($"---  {clientData.ID}: {clientMsg.Substring(4)}  ---");
+                        await otherClient.streamWriter.FlushAsync();
+                    }
                 } else {
                     await clientData.streamWriter.WriteLineAsync($"---  {clientData.ID} -- QUIT SUCCESFULLY  ---");
                     await clientData.streamWriter.FlushAsync();
@@ -140,16 +147,27 @@ public partial class Server : Node
         GD.Print($"CLIENT QUIT: {clientData.ID}");
     }
 
-    private async static void echoClient(ClientData clientRef, string msg)
+
+
+    private static async Task EchoClientAsync(ClientData clientData) 
     {
-        if (msg.StartsWith("MSG:")) {
-            GD.Print($"{clientRef.ID}: {msg.Substring(4)}");  
-        } else
+        while (clientList.Count == 1)
         {
-            await clientRef.streamWriter.WriteLineAsync($"---  {clientRef.ID} -- QUIT SUCCESFULLY  ---");
-            await clientRef.streamWriter.FlushAsync();
+            string clientMsg = await clientData.streamReader.ReadLineAsync();
+
+            if (clientMsg != null) {
+                if (clientMsg.StartsWith("MSG:")) {
+                    GD.Print($"{clientData.ID}: {clientMsg.Substring(4)}");  
+                } else {
+                    await clientData.streamWriter.WriteLineAsync($"---  {clientData.ID} -- QUIT SUCCESFULLY  ---");
+                    await clientData.streamWriter.FlushAsync();
+                    break;
+                }
+            }
         }
+        GD.Print($"CLIENT QUIT: {clientData.ID}");
     }
+
 
     public void KillAll()
     {
