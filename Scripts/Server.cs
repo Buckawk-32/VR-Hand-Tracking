@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -104,10 +105,11 @@ public partial class Server : Node
         try {
             if (!string.IsNullOrEmpty(clientData.ID) && clientData.ID != "NONE") {
                 // await EchoClientAsync(clientData);
-                 var clientTask = LinkClientsAsync(clientData);
-                 if (clientTask.IsFaulted) {
-                     clientTask.Wait();
-                 }
+                // var clientTask = LinkClientsAsync(clientData);      
+                // if (clientTask.IsFaulted) {
+                //     clientTask.Wait();
+                // }
+                await LinkClientsAsync(clientData);
             }
         }
         catch (Exception e) {
@@ -124,18 +126,24 @@ public partial class Server : Node
 
     private static async Task LinkClientsAsync(ClientData clientData)
     {
-        while (clientList.Count == 1)
+        while (clientList.Count >= 1)
         {
             string clientMsg = await clientData.streamReader.ReadLineAsync();
 
-            
             if (clientMsg != null) {
                 if (clientMsg.StartsWith("MSG:")) {
                     GD.Print($"{clientData.ID}: {clientMsg.Substring(4)}");
 
-                    foreach (ClientData otherClient in clientList) {
-                        await otherClient.streamWriter.WriteLineAsync($"---  {clientData.ID}: {clientMsg.Substring(4)}  ---");
-                        await otherClient.streamWriter.FlushAsync();
+                    if (clientList.Count > 1) {
+                        foreach (ClientData otherClient in clientList) {
+                            if (otherClient.ID != clientData.ID) {
+                                await otherClient.streamWriter.WriteLineAsync($"---  {clientData.ID}: {clientMsg.Substring(4)}  ---");
+                                await otherClient.streamWriter.FlushAsync();
+                            }
+                        }
+                    } else {
+                        await clientData.streamWriter.WriteLineAsync("1");
+                        await clientData.streamWriter.FlushAsync();
                     }
                 } else {
                     await clientData.streamWriter.WriteLineAsync($"---  {clientData.ID} -- QUIT SUCCESFULLY  ---");
@@ -151,7 +159,7 @@ public partial class Server : Node
 
     private static async Task EchoClientAsync(ClientData clientData) 
     {
-        while (clientList.Count == 1)
+        while (clientList.Count >= 1)
         {
             string clientMsg = await clientData.streamReader.ReadLineAsync();
 
