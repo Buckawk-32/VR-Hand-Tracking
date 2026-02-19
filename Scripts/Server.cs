@@ -31,12 +31,12 @@ public partial class Server : Node
             string incomingMsg;
             incomingMsg = await streamReader.ReadLineAsync();
             
-            if (incomingMsg.StartsWith("Confirmation : ")) {
-                GD.Print($"NEW CLIENT: " + incomingMsg.Substring(11));
-                await streamWriter.WriteLineAsync($"  {incomingMsg.Substring(11)}  -- CONNECTED SUCCESFULLY ");
+            if (incomingMsg.StartsWith("CON:")) {
+                GD.Print($"NEW CLIENT: " + incomingMsg.Substring(4));
+                await streamWriter.WriteLineAsync($"---  {incomingMsg.Substring(4)}  -- CONNECTED SUCCESFULLY ---");
                 await streamWriter.FlushAsync();
 
-                ID = incomingMsg.Substring(11);
+                ID = incomingMsg.Substring(4);
             }
             else
             {
@@ -67,43 +67,36 @@ public partial class Server : Node
 
     
     private static TcpListener server { get; set; }
-    private static bool isServerRunning { get; set; }
+    public static bool isServerRunning { get; set; }
 
-    private static int portNumber = 4001;
+    private static readonly int portNumber = 4001;
     private static IPAddress host = IPAddress.Parse("127.0.0.1");
-    private static List<ClientData> clientList = new List<ClientData>();
+    private static List<ClientData> clientList = [];
 
-    private static readonly object _lock = new object();
+    private static readonly object _lock = new();
 
     public static async Task StartServer()
     {
         server = new TcpListener(host, portNumber);
         server.Start();
-        GD.Print("Server started...");
+        GD.Print(" --- Server started --- ");
         isServerRunning = true;
 
         while (true) {
             var client = await server.AcceptTcpClientAsync();
-            GD.Print("Accept New Client...");
-            var currentTask = StartConnectionAsync(client);
-
-            if (currentTask.IsFaulted) {
-                currentTask.Wait();
-            }
+            GD.Print(" --- Accept New Client --- ");
+            await StartConnectionAsync(client);
         }
     }
 
     private async static Task StartConnectionAsync(TcpClient client) 
     {
-        ClientData clientData = new ClientData(client);
+        ClientData clientData = new(client);
         lock (_lock)
         {
             clientList.Add(clientData); 
         }
-        Task taskID = Task.Run(async () => await clientData.SaveID());
-        if (taskID.IsFaulted) {
-            taskID.Wait();
-        }
+        await clientData.SaveID();
 
         try {
             if (!string.IsNullOrEmpty(clientData.ID) && clientData.ID != "NONE") {
@@ -121,24 +114,41 @@ public partial class Server : Node
         }
     }
 
-    private static async Task HandleClientAsync(ClientData clientData) {
-        // GD.Print()
+
+    private static async Task HandleClientAsync(ClientData clientData) 
+    {
         string clientMsg;
 
         while (clientList.Count == 1)
         {
-            await clientData.streamWriter.WriteLineAsync($"Placeholder");
-            await clientData.streamWriter.FlushAsync();
+            // await clientData.streamWriter.WriteLineAsync($"Placeholder");
+            // await clientData.streamWriter.FlushAsync();
 
             clientMsg = await clientData.streamReader.ReadLineAsync();
-            if (clientMsg.StartsWith("QUIT:") && clientMsg != null) {
-                await clientData.streamWriter.WriteLineAsync($"  {clientData.ID} -- QUIT SUCCESFULLY  ");
-                await clientData.streamWriter.FlushAsync();
 
-                break;
+            if (clientMsg != null) {
+                if (clientMsg.StartsWith("MSG:")) {
+                    GD.Print($"{clientData.ID}: {clientMsg.Substring(4)}");  
+                    clientMsg = "";
+                } else {
+                    await clientData.streamWriter.WriteLineAsync($"---  {clientData.ID} -- QUIT SUCCESFULLY  ---");
+                    await clientData.streamWriter.FlushAsync();
+                    break;
+                }
             }
         }
         GD.Print($"CLIENT QUIT: {clientData.ID}");
+    }
+
+    private async static void echoClient(ClientData clientRef, string msg)
+    {
+        if (msg.StartsWith("MSG:")) {
+            GD.Print($"{clientRef.ID}: {msg.Substring(4)}");  
+        } else
+        {
+            await clientRef.streamWriter.WriteLineAsync($"---  {clientRef.ID} -- QUIT SUCCESFULLY  ---");
+            await clientRef.streamWriter.FlushAsync();
+        }
     }
 
     public void KillAll()
