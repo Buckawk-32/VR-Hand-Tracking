@@ -16,6 +16,7 @@ public partial class Server : Node
         public TcpClient clientRef { get; private set; }
         public TextWriter streamWriter { get; private set; }
         public TextReader streamReader { get; private set; }
+        public Queue<string> msgQueue { get; set; }
 
         public ClientData(TcpClient client)
         {
@@ -25,6 +26,8 @@ public partial class Server : Node
 
             streamReader = new StreamReader(networkStream);
             streamWriter = new StreamWriter(networkStream);
+
+            msgQueue = new Queue<string>(3);
         }
 
         public async Task SaveID()
@@ -61,6 +64,8 @@ public partial class Server : Node
             streamWriter.Close();
             streamReader.Close();
             clientRef.Close();
+            
+            msgQueue.Clear();
 
             GD.Print($"Closing Client: {ID}");
         }
@@ -133,12 +138,16 @@ public partial class Server : Node
             if (clientMsg != null) {
                 if (clientMsg.StartsWith("MSG:")) {
                     GD.Print($"{clientData.ID}: {clientMsg.Substring(4)}");
+                    clientData.msgQueue.Append(clientMsg.Substring(4));
 
                     if (clientList.Count > 1) {
                         foreach (ClientData otherClient in clientList) {
-                            if (otherClient.ID != clientData.ID) {
-                                await otherClient.streamWriter.WriteLineAsync($"---  {clientData.ID}: {clientMsg.Substring(4)}  ---");
-                                await otherClient.streamWriter.FlushAsync();
+                            foreach (string msg in clientData.msgQueue)
+                            {
+                                if (otherClient.ID != clientData.ID) {
+                                    await otherClient.streamWriter.WriteLineAsync($"---  {clientData.ID}: {msg}  ---");
+                                    await otherClient.streamWriter.FlushAsync();
+                                }
                             }
                         }
                     } else {
