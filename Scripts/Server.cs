@@ -2,7 +2,6 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -16,7 +15,6 @@ public partial class Server : Node
         public TcpClient clientRef { get; private set; }
         public TextWriter streamWriter { get; private set; }
         public TextReader streamReader { get; private set; }
-        public Queue<string> msgQueue { get; set; }
 
         public ClientData(TcpClient client)
         {
@@ -26,8 +24,6 @@ public partial class Server : Node
 
             streamReader = new StreamReader(networkStream);
             streamWriter = new StreamWriter(networkStream);
-
-            msgQueue = new Queue<string>(3);
         }
 
         public async Task SaveID()
@@ -65,8 +61,6 @@ public partial class Server : Node
             streamReader.Close();
             clientRef.Close();
             
-            msgQueue.Clear();
-
             GD.Print($"Closing Client: {ID}");
         }
     }
@@ -110,11 +104,8 @@ public partial class Server : Node
         try {
             if (!string.IsNullOrEmpty(clientData.ID) && clientData.ID != "NONE") {
                 // await EchoClientAsync(clientData);
-                // var clientTask = LinkClientsAsync(clientData);      
-                // if (clientTask.IsFaulted) {
-                //     clientTask.Wait();
-                // }
-                await LinkClientsAsync(clientData);
+                // await LinkClientsAsync(clientData);
+                await PushtoAllClientsAsync();
             }
         }
         catch (Exception e) {
@@ -129,6 +120,32 @@ public partial class Server : Node
     }
 
 
+    private static async Task PushtoAllClientsAsync()
+    {
+        while (clientList.Count >= 1)
+        {
+            Console.WriteLine(" > ");
+            string serverMsg = Console.ReadLine();
+
+            if (serverMsg != null) {
+                if (serverMsg != "q") {
+                    for (int i = 0; i < clientList.Count; i++)
+                    {
+                        await clientList[i].streamWriter.WriteLineAsync($"---  Server: {serverMsg}  ---");
+                        await clientList[i].streamWriter.FlushAsync();
+                    }
+                } else {
+                    for (int i = 0; i < clientList.Count; i++)
+                    {
+                        await clientList[i].streamWriter.WriteLineAsync($"QUIT---  {clientList[i].ID} -- FORCE QUIT FROM SERVER  ---");
+                        await clientList[i].streamWriter.FlushAsync();
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
     private static async Task LinkClientsAsync(ClientData clientData)
     {
         while (clientList.Count >= 1)
@@ -138,16 +155,12 @@ public partial class Server : Node
             if (clientMsg != null) {
                 if (clientMsg.StartsWith("MSG:")) {
                     GD.Print($"{clientData.ID}: {clientMsg.Substring(4)}");
-                    clientData.msgQueue.Append(clientMsg.Substring(4));
 
                     if (clientList.Count > 1) {
                         foreach (ClientData otherClient in clientList) {
-                            foreach (string msg in clientData.msgQueue)
-                            {
-                                if (otherClient.ID != clientData.ID) {
-                                    await otherClient.streamWriter.WriteLineAsync($"---  {clientData.ID}: {msg}  ---");
-                                    await otherClient.streamWriter.FlushAsync();
-                                }
+                            if (otherClient.ID != clientData.ID) {
+                                await otherClient.streamWriter.WriteLineAsync($"---  {clientData.ID}: {clientMsg.Substring(4)}  ---");
+                                await otherClient.streamWriter.FlushAsync();
                             }
                         }
                     } else {
@@ -163,8 +176,6 @@ public partial class Server : Node
         }
         GD.Print($"CLIENT QUIT: {clientData.ID}");
     }
-
-
 
     private static async Task EchoClientAsync(ClientData clientData) 
     {
