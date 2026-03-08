@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://dfqiq2k45a7wv"]
+
+[ext_resource type="Script" uid="uid://38w162rahu17" path="res://Scripts/textInput.gd" id="1_luifk"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_luifk"]
+particles_animation = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="Theme" id="Theme_dvaiw"]
+
+[node name="Control" type="Control" unique_id=121264739]
+material = SubResource("CanvasItemMaterial_luifk")
+layout_mode = 3
+anchor_right = 0.264
+anchor_bottom = 0.298
+offset_right = -0.12799072
+offset_bottom = -31.104004
+grow_horizontal = 2
+grow_vertical = 2
+tooltip_text = "Server Text:"
+theme = SubResource("Theme_dvaiw")
+script = ExtResource("1_luifk")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1009272282]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.3764706, 0.46666667, 0.44313726, 0.34117648)
+
+[node name="LineEdit" type="LineEdit" parent="." unique_id=1204915875]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.1910001
+offset_bottom = 0.0579834
+text = "Server:"
+keep_editing_on_text_submit = true
