@@ -103,9 +103,9 @@ public partial class Server : Node
 
         try {
             if (!string.IsNullOrEmpty(clientData.ID) && clientData.ID != "NONE") {
-                // await EchoClientAsync(clientData);
+                await EchoClientAsync(clientData);
                 // await LinkClientsAsync(clientData);
-                await PushtoAllClientsAsync();
+                // await PushtoAllClientsAsync();
             }
         }
         catch (Exception e) {
