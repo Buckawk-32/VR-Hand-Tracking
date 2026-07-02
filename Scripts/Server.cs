@@ -1,10 +1,10 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Godot;
 
 
 public partial class Server : Node
@@ -68,7 +68,9 @@ public partial class Server : Node
     
     private static TcpListener server { get; set; }
     public static bool isServerRunning { get; set; }
+    private static List<ClientData> ClientList { get => clientList; set => clientList = value; }
 
+    private const int StartIndex = 4;
     private static readonly int portNumber = 4001;
     private static IPAddress host = IPAddress.Parse("127.0.0.1");
     private static List<ClientData> clientList = [];
@@ -97,7 +99,7 @@ public partial class Server : Node
         ClientData clientData = new(client);
         lock (_lock)
         {
-            clientList.Add(clientData); 
+            ClientList.Add(clientData); 
         }
         await clientData.SaveID();
 
@@ -113,7 +115,7 @@ public partial class Server : Node
         }
         finally {
             lock (_lock) {
-                clientList.Remove(clientData);
+                ClientList.Remove(clientData);
             }
             clientData.Dispose();
         }
@@ -122,23 +124,23 @@ public partial class Server : Node
 
     private static async Task PushtoAllClientsAsync()
     {
-        while (clientList.Count >= 1)
+        while (ClientList.Count >= 1)
         {
             Console.WriteLine(" > ");
             string serverMsg = Console.ReadLine();
 
             if (serverMsg != null) {
                 if (serverMsg != "q") {
-                    for (int i = 0; i < clientList.Count; i++)
+                    for (int i = 0; i < ClientList.Count; i++)
                     {
-                        await clientList[i].streamWriter.WriteLineAsync($"---  Server: {serverMsg}  ---");
-                        await clientList[i].streamWriter.FlushAsync();
+                        await ClientList[i].streamWriter.WriteLineAsync($"---  Server: {serverMsg}  ---");
+                        await ClientList[i].streamWriter.FlushAsync();
                     }
                 } else {
-                    for (int i = 0; i < clientList.Count; i++)
+                    for (int i = 0; i < ClientList.Count; i++)
                     {
-                        await clientList[i].streamWriter.WriteLineAsync($"QUIT---  {clientList[i].ID} -- FORCE QUIT FROM SERVER  ---");
-                        await clientList[i].streamWriter.FlushAsync();
+                        await ClientList[i].streamWriter.WriteLineAsync($"QUIT---  {ClientList[i].ID} -- FORCE QUIT FROM SERVER  ---");
+                        await ClientList[i].streamWriter.FlushAsync();
                     }
                     break;
                 }
@@ -148,7 +150,7 @@ public partial class Server : Node
 
     private static async Task LinkClientsAsync(ClientData clientData)
     {
-        while (clientList.Count >= 1)
+        while (ClientList.Count >= 1)
         {
             string clientMsg = await clientData.streamReader.ReadLineAsync();
 
@@ -156,8 +158,8 @@ public partial class Server : Node
                 if (clientMsg.StartsWith("MSG:")) {
                     GD.Print($"{clientData.ID}: {clientMsg.Substring(4)}");
 
-                    if (clientList.Count > 1) {
-                        foreach (ClientData otherClient in clientList) {
+                    if (ClientList.Count > 1) {
+                        foreach (ClientData otherClient in ClientList) {
                             if (otherClient.ID != clientData.ID) {
                                 await otherClient.streamWriter.WriteLineAsync($"---  {clientData.ID}: {clientMsg.Substring(4)}  ---");
                                 await otherClient.streamWriter.FlushAsync();
@@ -179,7 +181,7 @@ public partial class Server : Node
 
     private static async Task EchoClientAsync(ClientData clientData) 
     {
-        while (clientList.Count >= 1)
+        while (ClientList.Count >= 1)
         {
             string clientMsg = await clientData.streamReader.ReadLineAsync();
 
@@ -203,10 +205,10 @@ public partial class Server : Node
 
         lock (_lock)
         {
-            if (clientList.Count > 0) {
-                foreach (ClientData clientData in clientList) {
+            if (ClientList.Count > 0) {
+                foreach (ClientData clientData in ClientList) {
                     clientData.Dispose();
-                    clientList.Remove(clientData);
+                    ClientList.Remove(clientData);
                 }
             }
         }
