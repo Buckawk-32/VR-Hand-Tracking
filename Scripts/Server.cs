@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -11,7 +12,47 @@ public partial class Server : Node
 {
     class ClientData : IDisposable
     {
+        public class MessageQueue {
+            public string[] dataList = new string[3];
+
+            public MessageQueue()
+            {
+                dataList = ["placeholder", "placeholder", "placeholder"];
+            }
+
+            public void EnqueueMessage(string msg) 
+            {
+                for (int i = 0; i < dataList.Length; i++)
+                {
+                    if (i==2) {
+                        dataList[i] = msg;
+                    } else {
+                        dataList[i] = dataList[i+1];
+                    }
+                }
+            }
+
+            public void ClearQueue()
+            {
+                for (int i = 0; i < dataList.Length; i++)
+                {
+                    dataList[i] = " ";
+                    GD.Print("Message Queue Cleared!");
+                }
+            }
+
+            public void PrintQueue()
+            {
+                for (int i = 0; i < dataList.Length; i++)
+                {
+                    GD.Print($"Index: {i}, Message: {dataList[i]}");
+                }
+            }
+        }
+
+
         public string ID { get; private set; } 
+        public MessageQueue messageQueue { get; private set; }
         public TcpClient clientRef { get; private set; }
         public TextWriter streamWriter { get; private set; }
         public TextReader streamReader { get; private set; }
@@ -24,6 +65,8 @@ public partial class Server : Node
 
             streamReader = new StreamReader(networkStream);
             streamWriter = new StreamWriter(networkStream);
+
+            messageQueue = new MessageQueue();
         }
 
         public async Task SaveID()
@@ -105,7 +148,8 @@ public partial class Server : Node
 
         try {
             if (!string.IsNullOrEmpty(clientData.ID) && clientData.ID != "NONE") {
-                await EchoClientAsync(clientData);
+                await TestMessageQueueAsync(clientData);
+                // await EchoClientAsync(clientData);
                 // await LinkClientsAsync(clientData);
                 // await PushtoAllClientsAsync();
             }
@@ -120,6 +164,28 @@ public partial class Server : Node
             clientData.Dispose();
         }
     }
+
+    
+    private static async Task TestMessageQueueAsync(ClientData clientData)
+    {
+        while (ClientList.Count >= 1)
+        {
+            string clientMsg = await clientData.streamReader.ReadLineAsync();
+
+            if (clientMsg != null) {
+                clientData.messageQueue.PrintQueue();
+
+                if (clientMsg.StartsWith("MSG:")) {
+                    clientData.messageQueue.EnqueueMessage($"{clientData.ID}: {clientMsg.Substring(4)}");
+                } else {
+                    await clientData.streamWriter.WriteLineAsync($"---  {clientData.ID} -- QUIT SUCCESFULLY  ---");
+                    await clientData.streamWriter.FlushAsync();
+                    break;
+                }
+            }
+        }
+    }
+
 
 
     private static async Task PushtoAllClientsAsync()
