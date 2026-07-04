@@ -1,52 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 
-
 public partial class Server : Node
 {
-    class ClientData : IDisposable
+    class ClientData : IDisposable 
     {
-        public class MessageQueue {
-            public string[] dataList = new string[3];
+        class MessageQueue 
+        {
+            public Queue<String> dataQueue = new Queue<string>(3);
+
 
             public MessageQueue()
             {
-                dataList = ["placeholder", "placeholder", "placeholder"];
-            }
-
-            public void EnqueueMessage(string msg) 
-            {
-                for (int i = 0; i < dataList.Length; i++)
-                {
-                    if (i==2) {
-                        dataList[i] = msg;
-                    } else {
-                        dataList[i] = dataList[i+1];
-                    }
-                }
-            }
-
-            public void ClearQueue()
-            {
-                for (int i = 0; i < dataList.Length; i++)
-                {
-                    dataList[i] = " ";
-                    GD.Print("Message Queue Cleared!");
-                }
-            }
-
-            public void PrintQueue()
-            {
-                for (int i = 0; i < dataList.Length; i++)
-                {
-                    GD.Print($"Index: {i}, Message: {dataList[i]}");
-                }
             }
         }
 
@@ -118,7 +89,7 @@ public partial class Server : Node
     private static IPAddress host = IPAddress.Parse("127.0.0.1");
     private static List<ClientData> clientList = [];
 
-    private static readonly object _lock = new();
+    private static readonly Lock _lock = new();
 
     public static async Task StartServer()
     {
