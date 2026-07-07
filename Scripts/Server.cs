@@ -1,95 +1,32 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Godot;
+using ServerSystem.ClientHandler;
+
+
+//  NOTE: GOALS
+//  1. Seperate Input and Output System
+//  2. Check whether Message Queue Works
+
+
+namespace ServerSystem;
 
 public partial class Server : Node
 {
-    class ClientData : IDisposable 
-    {
-        class MessageQueue 
-        {
-            public Queue<String> dataQueue = new Queue<string>(3);
-
-
-            public MessageQueue()
-            {
-            }
-        }
-
-
-        public string ID { get; private set; } 
-        public MessageQueue messageQueue { get; private set; }
-        public TcpClient clientRef { get; private set; }
-        public TextWriter streamWriter { get; private set; }
-        public TextReader streamReader { get; private set; }
-
-        public ClientData(TcpClient client)
-        {
-            clientRef = client;
-
-            NetworkStream networkStream = clientRef.GetStream();
-
-            streamReader = new StreamReader(networkStream);
-            streamWriter = new StreamWriter(networkStream);
-
-            messageQueue = new MessageQueue();
-        }
-
-        public async Task SaveID()
-        {
-            string incomingMsg;
-            incomingMsg = await streamReader.ReadLineAsync();
-            
-            if (incomingMsg.StartsWith("CON:")) {
-                GD.Print($"NEW CLIENT: " + incomingMsg.Substring(4));
-                await streamWriter.WriteLineAsync($"---  {incomingMsg.Substring(4)}  -- CONNECTED SUCCESFULLY ---");
-                await streamWriter.FlushAsync();
-
-                ID = incomingMsg.Substring(4);
-            }
-            else
-            {
-                await streamWriter.WriteLineAsync("Please Send Confirmation ID");
-                await streamWriter.FlushAsync();
-
-                ID = "NONE";
-            }
-        }
-
-        public void Dispose() 
-        {
-            Task closeClientData = Task.Run( async () => await Close());
-        }
-
-        public async Task Close() 
-        {
-            await streamWriter.WriteLineAsync($"Server Closing Connection to {ID}");
-            await streamWriter.FlushAsync();
-
-            streamWriter.Close();
-            streamReader.Close();
-            clientRef.Close();
-            
-            GD.Print($"Closing Client: {ID}");
-        }
-    }
-
-    
     private static TcpListener server { get; set; }
     public static bool isServerRunning { get; set; }
     private static List<ClientData> ClientList { get => clientList; set => clientList = value; }
 
-    private const int StartIndex = 4;
     private static readonly int portNumber = 4001;
     private static IPAddress host = IPAddress.Parse("127.0.0.1");
     private static List<ClientData> clientList = [];
 
     private static readonly Lock _lock = new();
+
 
     public static async Task StartServer()
     {
@@ -108,6 +45,7 @@ public partial class Server : Node
         }
     }
 
+    
     private async static Task StartConnectionAsync(TcpClient client) 
     {
         ClientData clientData = new(client);
@@ -117,6 +55,7 @@ public partial class Server : Node
         }
         await clientData.SaveID();
 
+        //  TODO: Await for a Input Handler Function, then queue to ClientRef a message queue
         try {
             if (!string.IsNullOrEmpty(clientData.ID) && clientData.ID != "NONE") {
                 await TestMessageQueueAsync(clientData);
@@ -137,6 +76,21 @@ public partial class Server : Node
     }
 
     
+    private static async Task GrabAsyncInput(ClientData clientData)
+    {
+        while (ClientList.Count >= 1) {
+
+        }
+    }
+
+
+
+
+
+
+
+
+    //  TODO: Make sure Message Queue works
     private static async Task TestMessageQueueAsync(ClientData clientData)
     {
         while (ClientList.Count >= 1)
@@ -144,10 +98,8 @@ public partial class Server : Node
             string clientMsg = await clientData.streamReader.ReadLineAsync();
 
             if (clientMsg != null) {
-                clientData.messageQueue.PrintQueue();
-
                 if (clientMsg.StartsWith("MSG:")) {
-                    clientData.messageQueue.EnqueueMessage($"{clientData.ID}: {clientMsg.Substring(4)}");
+                    // clientData.messageQueue.EnqueueMessage($"{clientData.ID}: {clientMsg.Substring(4)}");
                 } else {
                     await clientData.streamWriter.WriteLineAsync($"---  {clientData.ID} -- QUIT SUCCESFULLY  ---");
                     await clientData.streamWriter.FlushAsync();
@@ -158,7 +110,7 @@ public partial class Server : Node
     }
 
 
-
+    //  TODO: Make Push to All Clients Seperate from input and output
     private static async Task PushtoAllClientsAsync()
     {
         while (ClientList.Count >= 1)
@@ -185,6 +137,7 @@ public partial class Server : Node
         }
     }
 
+    //  TODO: Linking should be done within a seperate function based on message type
     private static async Task LinkClientsAsync(ClientData clientData)
     {
         while (ClientList.Count >= 1)
@@ -216,6 +169,8 @@ public partial class Server : Node
         GD.Print($"CLIENT QUIT: {clientData.ID}");
     }
 
+
+    //  TODO: Server Echo (Use as Testing)
     private static async Task EchoClientAsync(ClientData clientData) 
     {
         while (ClientList.Count >= 1)
@@ -235,7 +190,7 @@ public partial class Server : Node
         GD.Print($"CLIENT QUIT: {clientData.ID}");
     }
 
-
+    //  TODO: Overhaul this to clean data fully
     public void KillAll()
     {
         GD.Print("Shutting Down...");
