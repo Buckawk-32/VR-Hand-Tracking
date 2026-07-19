@@ -7,10 +7,7 @@ using Godot;
 
 namespace ServerSystem.ClientHandler; 
 
-//  NOTE: GOALS
-//  1. Add MessageRef datatype
-//      - Make sure to keep this as memory effecient as possible
-//  2. Less Nested Classes the better
+
 
 class ClientData : IDisposable 
 {
@@ -33,9 +30,9 @@ class ClientData : IDisposable
 
         public int Count() => _queue.Count;
 
+        //  TODO: Dispose of objects inside the Queue (.proto) before Clear()
         public void Dispose() 
         {
-            _queue.Clear();
         }
     }
 

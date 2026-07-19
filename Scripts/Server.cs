@@ -8,10 +8,6 @@ using Godot;
 using ServerSystem.ClientHandler;
 
 
-//  NOTE: GOALS
-//  1. Seperate Input and Output System
-//  2. Check whether Message Queue Works
-
 
 namespace ServerSystem;
 

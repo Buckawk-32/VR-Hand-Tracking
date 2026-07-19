@@ -1,0 +1,6 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/csharp:v35.1
+    out: gen/cSharp
+    opt: 
+      - base_namespace=
