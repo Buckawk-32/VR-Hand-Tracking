@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package self.server.v1;
+
+enum Tag {
+  TAG_MESSAGE_UNSPECIFIED = 0;
+  TAG_ERROR = 1;
+  TAG_CONNECTION = 2;
+  TAG_PONG = 3;
+  TAG_QUIT = 4;
+}
+
+
+message PacketEnvelope {
+  Tag tag = 1;
+  int32 client_id = 2;
+  string client_name = 3;
+  int64 timestamp = 4;
+
+  oneof payload {
+    Message message = 5;
+    Connection connection = 6;
+    Ping ping = 7;
+    Error error = 8;
+    Quit quit = 9;
+  }
+}
+
+
+
+message Message {
+  int32 receiving_id = 1;
+  string message = 2;
+}
+
+message Connection {
+}
+
+message Ping {
+}
+
+message Error {
+  string error = 1;
+}
+
+message Quit {
+}
+
