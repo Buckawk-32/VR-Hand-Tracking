@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package self.server.v1;
+
+enum ServerTag {
+  TAG_PONG_UNSPECIFIED = 0;
+  TAG_CONN_CONFIRM = 1;
+}
+
+
+message ServerPacketEnvelope {
+  ServerTag tag = 1;
+  int32 server_id = 2;
+  string server_name = 3;
+  int64 timestamp = 4;
+
+  oneof payload {
+    Pong pong = 5;
+    ConnConfirm conn_confim = 6;
+  }
+}
+
+
+message Pong {
+}
+
+message ConnConfirm {
+  bool connection_true = 1;
+  string connection_message = 2;
+}
